@@ -1,0 +1,13 @@
+﻿data/
+*.dcm
+*.dicom
+*.png
+*.jpg
+*.jpeg
+*.pth
+*.pt
+*.ckpt
+venv/
+.env
+__pycache__/
+.ipynb_checkpoints/
