@@ -1,0 +1,12 @@
+torch>=2.1
+torchvision>=0.16
+numpy
+pandas
+scikit-learn
+opencv-python
+pydicom
+pylibjpeg
+pylibjpeg-libjpeg
+python-gdcm
+matplotlib
+tqdm

@@ -1,0 +1,9 @@
+.venv/
+venv/
+__pycache__/
+runs/
+*.pt
+*.png
+*.dicom
+*.dcm
+pedi_png/
