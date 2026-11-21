@@ -7,3 +7,8 @@ runs/
 *.dicom
 *.dcm
 pedi_png/
+!cxr_cap/results/*.png
+!cxr_cap/results/*.png
+!cxr_cap/results/cams/*.png
+!cxr_cap/results/*.png
+!cxr_cap/results/cams/*.png
