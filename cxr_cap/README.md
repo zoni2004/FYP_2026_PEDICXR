@@ -85,29 +85,12 @@ so it may partly use non-lung cues. We did not check this systematically.
 ## Setup
 Training was run on Google Colab with a T4 GPU.
 
+    
+    Google Collab training link
+    https://colab.research.google.com/drive/1wGaUQmzw5rxPvgAGjnbSgVlM5gzJKiZ3
     python -m venv venv
     venv\Scripts\activate
     # Install PyTorch with CUDA from https://pytorch.org/get-started/locally
     pip install -r requirements.txt
     python smoke_test.py
 
-## How to run
-The dataset is not in this repo. Download PediCXR yourself from the
-official source and follow its license.
-
-    # 1. Convert DICOM to PNG
-    python prepare_data.py --data_root "<pedi-cxr folder>" --out_root "<png folder>"
-
-    # 2. Copy image_labels_train.csv and image_labels_test.csv into <png folder>
-
-    # 3. Quick test (2 epochs, 300 images, fold 0)
-    python train.py --data_root "<png folder>" --img_root "<png folder>" --epochs 2 --folds_to_run 0 --limit 300
-
-    # 4. Full run (all 5 folds)
-    python train.py --data_root "<png folder>" --img_root "<png folder>" --epochs 20
-
-    # 5. Grad-CAM heatmap
-    python gradcam.py --ckpt runs/exp1/fold0_best.pt --image "<png folder>/test/<image_id>.png" --out cam.png
-
-Outputs are saved in `runs/exp1`: `fold_results.csv`, `summary_mean_std.csv`,
-`roc_oof.png` and `foldK_best.pt`.
