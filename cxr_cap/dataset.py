@@ -1,11 +1,4 @@
-"""
-PediCXR dataset + paper wali augmentations (Eq. 1-4).
 
-Paper augmentations (training only):
-  1. Random scaling & padding : jitter=0.3, scale ~ U(0.8, 1.2)  -> Eq (1)(2)(3)
-  2. Random rotation          : 25% probability, [-10, +10] deg, bicubic
-  3. Color (HSV) augmentation : h=0.1, s=0.7, v=0.3, r = u*max_offset + 1, u ~ U(-1,1) -> Eq (4)
-"""
 import random
 from pathlib import Path
 
@@ -21,14 +14,7 @@ IMNET_STD = np.array([0.229, 0.224, 0.225], dtype=np.float32)
 
 # ----------------------------------------------------------------- labels
 def build_binary_labels(csv_path, pos_keyword="pneumonia", neg_mode="no_finding"):
-    """
-    image_labels_*.csv se CAP (1) vs non-CAP (0) labels banata hai.
 
-    pos  : koi bhi column jiske naam mein 'pneumonia' ho (Pneumonia, Bacterial pneumonia...)
-    neg_mode='no_finding' : sirf 'No finding' wali images negative (paper ke "normal" jaisa,
-                            baaki diseases exclude -> paper ne bhi other lung diseases exclude ki thi)
-    neg_mode='all_other'  : jo positive nahi wo sab negative
-    """
     df = pd.read_csv(csv_path)
     id_col = next(c for c in df.columns if c.lower().replace(" ", "_") in ("image_id", "imageid", "id"))
     cols = [c for c in df.columns if c != id_col]
