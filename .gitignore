@@ -7,8 +7,10 @@ runs/
 *.dicom
 *.dcm
 pedi_png/
+PediCXR dataset/
+pedi-cxr/
+image_labels_*.csv
+annotations_*.csv
+SHA256SUMS*
 !cxr_cap/results/*.png
-!cxr_cap/results/*.png
-!cxr_cap/results/cams/*.png
-!cxr_cap/results/*.png
-!cxr_cap/results/cams/*.png
+cxr_cap/results/cams/
