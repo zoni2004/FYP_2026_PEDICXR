@@ -1,14 +1,4 @@
-"""
-Paper ka multimodal model (Fig. 2, 3, 4 + Eq. 5, 6):
 
-  CXR  -> modified ResNet-50 -> FC(2048->128) -> LeakyReLU -> BN        => x_c (B,128)
-  Lab  -> 5x[FC -> LeakyReLU -> BN] (N->8N->4N->2N->N->N) -> Conv(->32) -> BN  => x_l (B,32)
-  Text -> Embedding -> 2-layer Bi-GRU -> FC -> LeakyReLU -> BN          => x_p (B,32)
-  concat(x_c, x_l, x_p) -> FC(->32) -> LeakyReLU -> FC(->2) -> softmax
-
-PediCXR mein sirf CXR hai, isliye use_lab=False, use_text=False se ye model paper ke
-"Chest X-Ray (ResNet-50)" baseline (Table 2, row 1) ban jata hai.
-"""
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -40,7 +30,7 @@ class LabBranch(nn.Module):
     def __init__(self, n_indicators=8, out_dim=32):
         super().__init__()
         N = n_indicators
-        dims = [N, 8 * N, 4 * N, 2 * N, N, N]            # 5 FC layers, length har layer par half
+        dims = [N, 8 * N, 4 * N, 2 * N, N, N]          
         self.fcs = nn.Sequential(*[fc_block(dims[i], dims[i + 1]) for i in range(5)])
         self.proj = nn.Conv1d(N, out_dim, kernel_size=1)  # paper: "convolution layer" -> 32
         self.bn = nn.BatchNorm1d(out_dim)
@@ -51,8 +41,7 @@ class LabBranch(nn.Module):
 
 
 class TextBranch(nn.Module):
-    # Paper: vocab 642 words, fixed length 27, 0 = empty/padding, 2-layer Bi-GRU, output 32.
-    # embed_dim / hidden paper mein nahi diye -> ye MERI assumption hai (64 / 64).
+
     def __init__(self, vocab_size=643, embed_dim=64, hidden=64, out_dim=32):
         super().__init__()
         self.emb = nn.Embedding(vocab_size, embed_dim, padding_idx=0)
@@ -63,7 +52,7 @@ class TextBranch(nn.Module):
         lengths = (x != 0).sum(1).clamp(min=1).cpu()
         packed = pack_padded_sequence(self.emb(x), lengths, batch_first=True, enforce_sorted=False)
         _, h_n = self.gru(packed)                         # (4,B,H): [l1 fwd, l1 bwd, l2 fwd, l2 bwd]
-        h = torch.cat([h_n[-2], h_n[-1]], dim=1)          # last layer, dono directions
+        h = torch.cat([h_n[-2], h_n[-1]], dim=1)         
         return self.head(h)
 
 
