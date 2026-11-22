@@ -11,7 +11,7 @@ import streamlit as st
 import torch
 import torch.nn.functional as F
 
-from dataset import letterbox_eval, to_tensor
+from dataset import letterbox_eval, to_tensor, encode_meta
 from model import MultimodalCAP
 
 HERE = Path(__file__).parent
@@ -32,8 +32,10 @@ def find_checkpoints():
 
 @st.cache_resource(show_spinner="Loading model...")
 def load_model(path):
-    m = MultimodalCAP(use_cxr=True, pretrained=False).to(DEV)
-    m.load_state_dict(torch.load(path, map_location=DEV))
+    sd = torch.load(path, map_location=DEV)
+    use_meta = any(k.startswith("meta.") for k in sd)      # age/sex-aware checkpoint?
+    m = MultimodalCAP(use_cxr=True, use_meta=use_meta, pretrained=False).to(DEV)
+    m.load_state_dict(sd)
     return m.eval()
 
 
@@ -51,7 +53,7 @@ def read_image(uploaded):
     return np.stack([g, g, g], -1)
 
 
-def predict_with_cam(model, rgb):
+def predict_with_cam(model, rgb, meta=None):
     img = letterbox_eval(rgb, SIZE)
     x = to_tensor(img).unsqueeze(0).to(DEV)
     acts, grads = {}, {}
@@ -60,7 +62,7 @@ def predict_with_cam(model, rgb):
     h2 = layer.register_full_backward_hook(lambda m, gi, go: grads.update(v=go[0]))
     try:
         with torch.enable_grad():
-            logits = model(cxr=x)
+            logits = model(cxr=x, meta=meta)
             prob = F.softmax(logits, 1)[0, 1].item()
             model.zero_grad()
             logits[0, 1].backward()
@@ -104,6 +106,10 @@ tab1, tab2, tab3 = st.tabs(["🔍 Diagnose", "📊 Model results", "ℹ️ About
 with tab1:
     f = st.file_uploader("Upload a chest X-ray (PNG / JPG / DICOM)",
                          type=["png", "jpg", "jpeg", "dcm", "dicom"])
+    ca, cb, cc = st.columns(3)
+    yrs = ca.number_input("Age: years", 0, 18, 1)
+    mos = cb.number_input("Age: months", 0, 11, 0)
+    sex = cc.selectbox("Sex", ["F", "M"])
     if f is None:
         st.info("Upload an X-ray to get a prediction and a Grad-CAM heatmap.")
     elif ckpt is None:
@@ -112,8 +118,13 @@ with tab1:
         try:
             model = load_model(str(ckpt))
             rgb = read_image(f)
+            meta = None
+            if model.use_meta:
+                meta = torch.from_numpy(encode_meta(yrs * 12 + mos, sex)).unsqueeze(0).to(DEV)
+            else:
+                st.caption("This checkpoint is image-only: age and sex are ignored.")
             with st.spinner("Analyzing..."):
-                img, overlay, prob = predict_with_cam(model, rgb)
+                img, overlay, prob = predict_with_cam(model, rgb, meta)
         except Exception as e:
             st.error(f"Error: {e}")
             st.stop()

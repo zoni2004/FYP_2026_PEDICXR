@@ -12,6 +12,26 @@ IMNET_MEAN = np.array([0.485, 0.456, 0.406], dtype=np.float32)
 IMNET_STD = np.array([0.229, 0.224, 0.225], dtype=np.float32)
 
 
+# ----------------------------------------------------------------- age / sex meta
+MAX_AGE_MONTHS = 216.0   # 18 years
+
+
+def encode_meta(age_months, sex):
+    """-> np.float32 [age_norm, sex, age_missing]. age_norm = log1p(months)/log1p(216); sex M=1, F=0, unknown=0.5."""
+    miss = 0.0
+    if age_months is None or (isinstance(age_months, float) and np.isnan(age_months)):
+        age_months, miss = 12.0, 1.0
+    age_norm = float(np.log1p(min(max(age_months, 0.0), MAX_AGE_MONTHS)) / np.log1p(MAX_AGE_MONTHS))
+    sx = {"M": 1.0, "F": 0.0}.get(str(sex).strip().upper()[:1], 0.5)
+    return np.array([age_norm, sx, miss], dtype=np.float32)
+
+
+def load_meta(csv_path):
+    """meta.csv (image_id, age_months, sex) -> {image_id: encoded vector}"""
+    df = pd.read_csv(csv_path)
+    return {str(r.image_id): encode_meta(r.age_months, r.sex) for r in df.itertuples()}
+
+
 # ----------------------------------------------------------------- labels
 def build_binary_labels(csv_path, pos_keyword="pneumonia", neg_mode="no_finding"):
 
@@ -122,8 +142,9 @@ class PediCXRDataset(Dataset):
     PediCXR mein lab/text hota hi nahi, isliye default sirf cxr + label.
     """
 
-    def __init__(self, df, img_dir, size=512, train=False, aug_scale=True):
+    def __init__(self, df, img_dir, size=512, train=False, aug_scale=True, meta=None):
         self.df, self.size, self.train = df.reset_index(drop=True), size, train
+        self.meta = meta   # dict image_id -> vector, or None (image-only)
         self.img_dir = Path(img_dir)
         self.paths = [resolve_path(self.img_dir, i) for i in self.df["image_id"]]
         missing = sum(p is None for p in self.paths)
@@ -153,4 +174,8 @@ class PediCXRDataset(Dataset):
             img = hsv_augment(img)
         else:
             img = letterbox_eval(img, self.size)
-        return {"cxr": to_tensor(img), "label": int(self.df.loc[i, "label"])}
+        out = {"cxr": to_tensor(img), "label": int(self.df.loc[i, "label"])}
+        if self.meta is not None:
+            vec = self.meta.get(str(self.df.loc[i, "image_id"]), encode_meta(None, None))
+            out["meta"] = torch.from_numpy(vec)
+        return out

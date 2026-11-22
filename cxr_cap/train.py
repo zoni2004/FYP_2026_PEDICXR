@@ -18,7 +18,7 @@ from sklearn.metrics import (accuracy_score, f1_score, precision_score, recall_s
 from sklearn.model_selection import StratifiedKFold
 from torch.utils.data import DataLoader
 
-from dataset import PediCXRDataset, build_binary_labels
+from dataset import PediCXRDataset, build_binary_labels, load_meta
 from model import MultimodalCAP
 
 
@@ -37,8 +37,9 @@ def evaluate(model, loader, device, criterion):
     ys, ps, loss_sum, n = [], [], 0.0, 0
     for b in loader:
         x, y = b["cxr"].to(device), b["label"].to(device)
+        mt = b["meta"].to(device) if "meta" in b else None
         with torch.autocast(device_type=device.type, enabled=device.type == "cuda"):
-            logits = model(cxr=x)
+            logits = model(cxr=x, meta=mt)
         loss_sum += criterion(logits.float(), y).item() * len(y)
         n += len(y)
         ys.append(y.cpu().numpy())
@@ -63,6 +64,7 @@ def main():
     ap.add_argument("--workers", type=int, default=2)
     ap.add_argument("--limit", type=int, default=0, help="debug: itni images hi use karo")
     ap.add_argument("--seed", type=int, default=42)
+    ap.add_argument("--meta_csv", default=None, help="meta.csv from extract_meta.py -> trains age+sex aware model")
     args = ap.parse_args()
 
     torch.manual_seed(args.seed)
@@ -90,8 +92,10 @@ def main():
             lambda d: d.sample(min(len(d), args.limit // 2), random_state=args.seed)).reset_index(drop=True)
         te_df = te_df.sample(min(len(te_df), args.limit // 2), random_state=args.seed)
     tr_df = tr_df.reset_index(drop=True)
+    meta = load_meta(args.meta_csv) if args.meta_csv else None
+    print("age/sex meta:", "ON" if meta else "OFF (image-only baseline)")
 
-    test_ds = PediCXRDataset(te_df, img_root / "test", args.img_size, train=False)
+    test_ds = PediCXRDataset(te_df, img_root / "test", args.img_size, train=False, meta=meta)
     test_loader = DataLoader(test_ds, args.batch_size, shuffle=False, num_workers=args.workers)
 
     skf = StratifiedKFold(args.folds, shuffle=True, random_state=args.seed)
@@ -100,13 +104,13 @@ def main():
         if args.folds_to_run is not None and k not in args.folds_to_run:
             continue
         print(f"\n===== FOLD {k} =====")
-        tr_ds = PediCXRDataset(tr_df.iloc[tr_idx], img_root / "train", args.img_size, train=True)
-        va_ds = PediCXRDataset(tr_df.iloc[va_idx], img_root / "train", args.img_size, train=False)
+        tr_ds = PediCXRDataset(tr_df.iloc[tr_idx], img_root / "train", args.img_size, train=True, meta=meta)
+        va_ds = PediCXRDataset(tr_df.iloc[va_idx], img_root / "train", args.img_size, train=False, meta=meta)
         tr_loader = DataLoader(tr_ds, args.batch_size, shuffle=True, num_workers=args.workers,
                                drop_last=True, pin_memory=device.type == "cuda")
         va_loader = DataLoader(va_ds, args.batch_size, shuffle=False, num_workers=args.workers)
 
-        model = MultimodalCAP(use_cxr=True, use_lab=False, use_text=False).to(device)
+        model = MultimodalCAP(use_cxr=True, use_lab=False, use_text=False, use_meta=meta is not None).to(device)
         opt = torch.optim.AdamW(model.parameters(), lr=args.lr, betas=(0.9, 0.999))
         scaler = torch.amp.GradScaler(enabled=device.type == "cuda")
         crit = torch.nn.CrossEntropyLoss()
@@ -117,9 +121,10 @@ def main():
             t0, run = time.time(), 0.0
             for b in tr_loader:
                 x, y = b["cxr"].to(device, non_blocking=True), b["label"].to(device)
+                mt = b["meta"].to(device) if "meta" in b else None
                 opt.zero_grad(set_to_none=True)
                 with torch.autocast(device_type=device.type, enabled=device.type == "cuda"):
-                    logits = model(cxr=x)
+                    logits = model(cxr=x, meta=mt)
                 loss = crit(logits.float(), y)
                 scaler.scale(loss).backward()
                 scaler.step(opt)

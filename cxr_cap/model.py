@@ -56,19 +56,30 @@ class TextBranch(nn.Module):
         return self.head(h)
 
 
-class MultimodalCAP(nn.Module):
-    def __init__(self, use_cxr=True, use_lab=False, use_text=False,
-                 n_indicators=8, vocab_size=643, pretrained=True):
+class MetaBranch(nn.Module):
+    """Age + sex branch: [age_norm, sex, age_missing] -> 32 features."""
+    def __init__(self, n_meta=3, out_dim=32):
         super().__init__()
-        assert use_cxr or use_lab or use_text
-        self.use_cxr, self.use_lab, self.use_text = use_cxr, use_lab, use_text
+        self.net = nn.Sequential(fc_block(n_meta, 16), fc_block(16, out_dim))
+
+    def forward(self, x):                                 # x: (B, n_meta) float
+        return self.net(x)
+
+
+class MultimodalCAP(nn.Module):
+    def __init__(self, use_cxr=True, use_lab=False, use_text=False, use_meta=False,
+                 n_indicators=8, vocab_size=643, n_meta=3, pretrained=True):
+        super().__init__()
+        assert use_cxr or use_lab or use_text or use_meta
+        self.use_cxr, self.use_lab, self.use_text, self.use_meta = use_cxr, use_lab, use_text, use_meta
         self.cxr = CXRBranch(128, pretrained) if use_cxr else None
         self.lab = LabBranch(n_indicators, 32) if use_lab else None
         self.text = TextBranch(vocab_size, out_dim=32) if use_text else None
-        fused = 128 * use_cxr + 32 * use_lab + 32 * use_text   # full model: 128+32+32 = 192
+        self.meta = MetaBranch(n_meta, 32) if use_meta else None
+        fused = 128 * use_cxr + 32 * use_lab + 32 * use_text + 32 * use_meta   # full model: 128+32+32 = 192
         self.classifier = nn.Sequential(nn.Linear(fused, 32), nn.LeakyReLU(0.01), nn.Linear(32, 2))
 
-    def forward(self, cxr=None, lab=None, text=None):
+    def forward(self, cxr=None, lab=None, text=None, meta=None):
         feats = []
         if self.use_cxr:
             feats.append(self.cxr(cxr))
@@ -76,6 +87,8 @@ class MultimodalCAP(nn.Module):
             feats.append(self.lab(lab))
         if self.use_text:
             feats.append(self.text(text))
+        if self.use_meta:
+            feats.append(self.meta(meta))
         return self.classifier(torch.cat(feats, dim=1))   # logits; softmax = F.softmax(.,1)
 
     @property
