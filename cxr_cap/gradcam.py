@@ -1,7 +1,4 @@
-"""
-GradCAM (paper Fig. 9): trained fold checkpoint par CAP class ka heatmap.
-    python gradcam.py --ckpt runs/exp1/fold0_best.pt --image "D:/.../test/xxxx.png" --out cam.png
-"""
+
 import argparse
 
 import cv2
