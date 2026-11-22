@@ -1,12 +1,4 @@
-"""
-Step 1: DICOM -> PNG converter (ek baar chalao, phir training fast hogi).
 
-Usage (Windows PowerShell):
-    python prepare_data.py --data_root "D:/FYP/PediCXR dataset/pedi-cxr" --out_root "D:/FYP/pedi_png"
-
-Paper: original CXR 1024x1024 thi, model input 512x512. Hum PNG ko max 1024 side tak
-save karte hain (aspect ratio preserve), training time par 512 par laayenge.
-"""
 import argparse
 from pathlib import Path
 
@@ -24,7 +16,6 @@ def dicom_to_uint8(path: Path) -> np.ndarray:
         arr = apply_voi_lut(arr, ds).astype(np.float32)
     except Exception:
         pass
-    # MONOCHROME1 = inverted (hawa safed). Normal CXR ke liye invert karna padta hai.
     if getattr(ds, "PhotometricInterpretation", "") == "MONOCHROME1":
         arr = arr.max() - arr
     lo, hi = np.percentile(arr, (0.5, 99.5))
