@@ -82,6 +82,10 @@ so it may partly use non-lung cues. We did not check this systematically.
 - `smoke_test.py` - quick shape check, no dataset needed
 - `results/` - result tables, ROC curves, example heatmaps
 
+## Dataset
+The dataset is not in this repo. Download the PNG version of PediCXR here:
+https://drive.google.com/file/d/1I3A9TBi3R5b3R9_wD8aLdp2-LDngjFSN/view?usp=sharing
+
 ## Setup
 Training was run on Google Colab with a T4 GPU.
 
