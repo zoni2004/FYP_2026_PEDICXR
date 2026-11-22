@@ -1,9 +1,6 @@
 """
 5-fold cross-validation training (paper setup):
   AdamW(lr=1e-4, betas=(0.9,0.999)), cross-entropy, 100 epochs, 512x512 input,
-  har fold ka best epoch = LOWEST validation loss, final result = 5 folds ka average.
-Extra: har fold ka best model official PediCXR test split par bhi evaluate hota hai.
-
 Quick test:   python train.py --data_root ".../pedi-cxr" --img_root ".../pedi_png" --epochs 2 --folds_to_run 0 --limit 300
 Full run:     python train.py --data_root ".../pedi-cxr" --img_root ".../pedi_png" --epochs 100
 """
@@ -96,7 +93,6 @@ def main():
 
     test_ds = PediCXRDataset(te_df, img_root / "test", args.img_size, train=False)
     test_loader = DataLoader(test_ds, args.batch_size, shuffle=False, num_workers=args.workers)
-    # PediCXR mein har image alag study hai (patient id CSV mein nahi) -> image-level split.
 
     skf = StratifiedKFold(args.folds, shuffle=True, random_state=args.seed)
     fold_res, oof_y, oof_p = [], [], []
