@@ -12,3 +12,4 @@ pedi-cxr/
 SHA256SUMS*
 !cxr_cap/results/*.png
 cxr_cap/results/cams/
+!cxr_cap/fold0_best.pt
