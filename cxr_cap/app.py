@@ -79,6 +79,19 @@ def predict_with_cam(model, rgb, meta=None):
     return img, overlay, prob
 
 
+@st.cache_data
+def load_truth():
+    """image_id -> (label, split) from the dataset label CSVs (so the demo can show ground truth)."""
+    from dataset import build_binary_labels
+    truth = {}
+    for split in ("train", "test"):
+        p = HERE.parent / "data" / f"image_labels_{split}.csv"
+        if p.exists():
+            df, _ = build_binary_labels(p)
+            truth.update({i: (int(l), split) for i, l in zip(df.image_id, df.label)})
+    return truth
+
+
 # ---------------------------------------------------------------- sidebar
 st.sidebar.title("⚙️ Settings")
 ckpts = find_checkpoints()
@@ -141,6 +154,18 @@ with tab1:
             st.metric("P(pneumonia)", f"{prob:.1%}")
             st.progress(float(prob))
             st.caption(f"Threshold: {thr:.2f}")
+            hit = load_truth().get(Path(f.name).stem)
+            if hit is None:
+                st.caption("Ground truth: not found (rename file to its original dataset ID to compare).")
+            else:
+                lab, split = hit
+                st.markdown(f"**Ground truth:** {'Pneumonia' if lab else 'Normal'}")
+                if int(is_pn) == lab:
+                    st.success("✅ Prediction matches the true label")
+                else:
+                    st.error("❌ Prediction does not match the true label")
+                if split == "train":
+                    st.caption("⚠️ This image was in the training set, so it is not a fair test.")
             st.warning("Heatmaps may highlight non-lung areas (shoulders / abdomen) — "
                        "treat as indicative only.")
 
