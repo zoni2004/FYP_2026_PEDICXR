@@ -13,3 +13,12 @@ SHA256SUMS*
 !cxr_cap/results/*.png
 cxr_cap/results/cams/
 !cxr_cap/fold0_best.pt
+
+# backend: uploaded X-rays, heatmaps and the database stay on this computer
+backend/storage/
+.pytest_cache/
+
+# frontend
+node_modules/
+frontend/dist/
+.env.local

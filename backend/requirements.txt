@@ -1,0 +1,21 @@
+# Install PyTorch first (CPU build), see README:
+#   pip install torch==2.6.0 torchvision==0.21.0 --index-url https://download.pytorch.org/whl/cpu
+#
+# SQLAlchemy is pinned to 2.0.x and installed without compiled extensions, because
+# Windows Smart App Control blocks SQLAlchemy 2.1's compiled module on this machine:
+#   set DISABLE_SQLALCHEMY_CEXT=1  (PowerShell: $env:DISABLE_SQLALCHEMY_CEXT=1)
+#   pip install sqlalchemy==2.0.36 --no-binary sqlalchemy
+fastapi[standard]==0.165.0
+sqlalchemy==2.0.36
+pydantic==2.14.4
+numpy==2.5.4
+pandas==3.1.1
+opencv-python-headless
+pydicom==3.0.2
+reportlab==5.1.2
+tqdm==4.70.1
+python-multipart==0.0.34
+
+# tests
+pytest==9.2.0
+httpx==0.28.1
