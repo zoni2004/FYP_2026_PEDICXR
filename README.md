@@ -11,15 +11,12 @@ Age-aware AI system for pediatric chest X-rays (FYP 2026).
 
 ## Run the web app
 
-Start the backend, then the frontend, each in its own terminal (Windows PowerShell):
+Start the backend, then the frontend
 
 ```powershell
-cd backend; .venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8010
+.venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8010
 ```
 
 ```powershell
-cd frontend; npm.cmd run dev
+npm.cmd run dev
 ```
-
-Open http://localhost:5173. First-time setup is in [backend/README.md](backend/README.md)
-and [frontend/README.md](frontend/README.md).
