@@ -1,0 +1,15 @@
+.venv/
+venv/
+__pycache__/
+runs/
+*.pt
+*.png
+*.dicom
+*.dcm
+pedi_png/
+PediCXR dataset/
+pedi-cxr/
+SHA256SUMS*
+!cxr_cap/results/*.png
+cxr_cap/results/cams/
+!cxr_cap/fold0_best.pt
